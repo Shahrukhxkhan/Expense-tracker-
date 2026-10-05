@@ -5,7 +5,6 @@ import '../../core/services/csv_import_service.dart';
 import '../../core/services/data_export_service.dart';
 import '../../core/services/encrypted_backup_service.dart';
 import '../../core/services/pdf_report_service.dart';
-import '../../core/utils/currency_formatter.dart';
 import '../../data/models/models.dart';
 import '../providers/expense_providers.dart';
 import '../providers/sync_provider.dart';
