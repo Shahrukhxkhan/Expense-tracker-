@@ -52,6 +52,9 @@ dependencies:
   csv: ^8.0.0
   flutter_local_notifications: ^8.2.0
   timezone: ^0.8.0
+  pdf: ^3.12.0
+  printing: ^5.14.3
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:

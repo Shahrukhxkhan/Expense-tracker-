@@ -44,6 +44,11 @@ class DashboardScreen extends ConsumerWidget {
             onPressed: () => context.push('/travel'),
           ),
           IconButton(
+            icon: const Icon(Icons.cloud_sync_outlined),
+            tooltip: 'Data, Sync & PDF Reports',
+            onPressed: () => context.push('/data-management'),
+          ),
+          IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings & Customization',
             onPressed: () => context.push('/settings'),

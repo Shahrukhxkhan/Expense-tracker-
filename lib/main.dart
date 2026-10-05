@@ -13,6 +13,7 @@ import 'presentation/screens/add_edit_transaction_screen.dart';
 import 'presentation/screens/budgets_screen.dart';
 import 'presentation/screens/category_management_screen.dart';
 import 'presentation/screens/dashboard_screen.dart';
+import 'presentation/screens/data_management_screen.dart';
 import 'presentation/screens/recurring_transactions_screen.dart';
 import 'presentation/screens/settings_screen.dart';
 import 'presentation/screens/travel_mode_screen.dart';
@@ -79,6 +80,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/travel',
       builder: (context, state) => const TravelModeScreen(),
+    ),
+    GoRoute(
+      path: '/data-management',
+      builder: (context, state) => const DataManagementScreen(),
     ),
     GoRoute(
       path: '/settings',
