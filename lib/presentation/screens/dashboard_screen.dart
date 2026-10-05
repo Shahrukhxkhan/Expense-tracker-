@@ -39,6 +39,11 @@ class DashboardScreen extends ConsumerWidget {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.savings_outlined),
+            tooltip: 'Savings Goals & Debts',
+            onPressed: () => context.push('/goals-debts'),
+          ),
+          IconButton(
             icon: const Icon(Icons.flight_takeoff_outlined),
             tooltip: 'Travel & Multi-Currency',
             onPressed: () => context.push('/travel'),
