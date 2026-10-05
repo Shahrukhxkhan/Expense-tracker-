@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import '../../core/services/currency_service.dart';
 import '../../data/models/trip_model.dart';
 
 class TravelModeNotifier extends StateNotifier<List<TripSummary>> {
