@@ -43,10 +43,15 @@ class CsvImportService {
 
   /// Parse raw CSV string into rows
   List<List<dynamic>> parseCsvRaw(String rawCsv) {
-    return const CsvToListConverter(
-      shouldParseNumbers: false,
-      eol: '\n',
-    ).convert(rawCsv);
+    final lines = rawCsv.split(RegExp(r'\r?\n'));
+    final rows = <List<dynamic>>[];
+    for (final line in lines) {
+      if (line.trim().isEmpty) continue;
+      // Split by comma preserving quoted sections
+      final items = line.split(',').map((e) => e.replaceAll('"', '').trim()).toList();
+      rows.add(items);
+    }
+    return rows;
   }
 
   /// Guess column indices automatically from header row

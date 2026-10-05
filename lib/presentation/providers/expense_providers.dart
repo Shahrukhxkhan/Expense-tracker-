@@ -38,6 +38,13 @@ final recentTransactionsProvider = FutureProvider<List<TransactionWithDetails>>(
   return repo.getTransactions(limit: 5);
 });
 
+/// All transactions without pagination for exports, reports, and backups.
+final allTransactionsProvider = FutureProvider<List<TransactionWithDetails>>((ref) async {
+  ref.watch(dataChangeStreamProvider);
+  final repo = ref.watch(expenseRepositoryProvider);
+  return repo.getTransactions();
+});
+
 /// 6-month monthly cashflow history.
 final monthlyFlowHistoryProvider = FutureProvider<List<MonthlyFlowSummary>>((ref) async {
   ref.watch(dataChangeStreamProvider);

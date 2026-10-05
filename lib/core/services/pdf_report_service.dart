@@ -83,7 +83,7 @@ class PdfReportService {
               _buildSummaryBox(
                 'Total Income',
                 '$currencySymbol${totalIncome.toStringAsFixed(2)}',
-                PdfColors.emerald700,
+                PdfColors.green700,
               ),
               pw.SizedBox(width: 10),
               _buildSummaryBox(
@@ -95,7 +95,7 @@ class PdfReportService {
               _buildSummaryBox(
                 'Net Cashflow',
                 '$currencySymbol${netSavings.toStringAsFixed(2)}',
-                netSavings >= 0 ? PdfColors.emerald700 : PdfColors.red700,
+                netSavings >= 0 ? PdfColors.green700 : PdfColors.red700,
               ),
               pw.SizedBox(width: 10),
               _buildSummaryBox(
