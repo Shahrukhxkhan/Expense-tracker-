@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../presentation/providers/theme_provider.dart';
 
 /// Semantic colors and Material 3 design tokens.
 class AppColors {
@@ -17,10 +18,17 @@ class AppColors {
   static const warningAmber = Color(0xFFF59E0B);
   static const warningAmberLight = Color(0xFFFEF3C7);
 
+  // Standard Slate Dark
   static const darkBackground = Color(0xFF0F172A); // Slate 900
   static const darkSurface = Color(0xFF1E293B); // Slate 800
   static const darkSurfaceVariant = Color(0xFF334155); // Slate 700
 
+  // Pure AMOLED / OLED Black
+  static const amoledBackground = Color(0xFF000000);
+  static const amoledSurface = Color(0xFF111111);
+  static const amoledSurfaceVariant = Color(0xFF1C1C1E);
+
+  // Light Mode
   static const lightBackground = Color(0xFFF8FAFC); // Slate 50
   static const lightSurface = Color(0xFFFFFFFF);
   static const lightSurfaceVariant = Color(0xFFF1F5F9);
@@ -43,16 +51,30 @@ class AppSpacing {
   static const double radiusFull = 999.0;
 }
 
-/// Unified ThemeData source for light and dark modes.
+/// Unified dynamic ThemeData generator.
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get lightTheme {
+  static ThemeData buildTheme({
+    required AppThemeMode mode,
+    required Color primaryColor,
+  }) {
+    switch (mode) {
+      case AppThemeMode.light:
+        return _buildLightTheme(primaryColor);
+      case AppThemeMode.dark:
+        return _buildDarkTheme(primaryColor, isAmoled: false);
+      case AppThemeMode.amoled:
+        return _buildDarkTheme(primaryColor, isAmoled: true);
+    }
+  }
+
+  static ThemeData _buildLightTheme(Color primaryColor) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
+        seedColor: primaryColor,
         brightness: Brightness.light,
         surface: AppColors.lightSurface,
       ),
@@ -78,11 +100,15 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.lightSurface,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+        indicatorColor: primaryColor.withValues(alpha: 0.15),
         elevation: 2,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.primary);
+            return TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: primaryColor,
+            );
           }
           return const TextStyle(fontSize: 12, color: Color(0xFF64748B));
         }),
@@ -90,46 +116,57 @@ class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme {
+  static ThemeData _buildDarkTheme(Color primaryColor, {required bool isAmoled}) {
+    final bgColor = isAmoled ? AppColors.amoledBackground : AppColors.darkBackground;
+    final surfaceColor = isAmoled ? AppColors.amoledSurface : AppColors.darkSurface;
+    final borderColor = isAmoled ? const Color(0xFF222222) : const Color(0xFF334155);
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
+        seedColor: primaryColor,
         brightness: Brightness.dark,
-        surface: AppColors.darkSurface,
+        surface: surfaceColor,
       ),
-      scaffoldBackgroundColor: AppColors.darkBackground,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.darkBackground,
+      scaffoldBackgroundColor: bgColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: bgColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: Colors.white,
         ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.darkSurface,
+        color: surfaceColor,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          side: const BorderSide(color: Color(0xFF334155)),
+          side: BorderSide(color: borderColor),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.darkSurface,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.3),
+        backgroundColor: surfaceColor,
+        indicatorColor: primaryColor.withValues(alpha: 0.3),
         elevation: 2,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.white);
+            return const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: Colors.white,
+            );
           }
           return const TextStyle(fontSize: 12, color: Color(0xFF94A3B8));
         }),
       ),
     );
   }
+
+  static ThemeData get lightTheme => buildTheme(mode: AppThemeMode.light, primaryColor: AppColors.primary);
+  static ThemeData get darkTheme => buildTheme(mode: AppThemeMode.dark, primaryColor: AppColors.primary);
 }

@@ -2,21 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'data/database/database_seeder.dart';
 import 'data/models/models.dart';
 import 'data/repositories/expense_repository.dart';
 import 'presentation/providers/expense_providers.dart';
+import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/accounts_screen.dart';
 import 'presentation/screens/add_edit_transaction_screen.dart';
 import 'presentation/screens/budgets_screen.dart';
 import 'presentation/screens/category_management_screen.dart';
 import 'presentation/screens/dashboard_screen.dart';
 import 'presentation/screens/recurring_transactions_screen.dart';
+import 'presentation/screens/settings_screen.dart';
 import 'presentation/screens/transaction_list_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notifications
+  await NotificationService.instance.init();
 
   // Initialize and seed repository if database is empty
   final repository = ExpenseRepository();
@@ -70,6 +76,10 @@ final _router = GoRouter(
       path: '/recurring',
       builder: (context, state) => const RecurringTransactionsScreen(),
     ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
+    ),
   ],
 );
 
@@ -78,15 +88,17 @@ class ExpenseTrackerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = ref.watch(themeModeProvider);
+    final themeState = ref.watch(themeSettingsProvider);
 
     return MaterialApp.router(
       title: 'Expense Tracker',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+      theme: AppTheme.buildTheme(
+        mode: themeState.themeMode,
+        primaryColor: themeState.accentColor.color,
+      ),
       routerConfig: _router,
     );
   }
 }
+
