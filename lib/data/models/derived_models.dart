@@ -73,3 +73,17 @@ class TransactionWithDetails {
     required this.account,
   });
 }
+
+/// Recurring transaction with resolved category and account metadata.
+class RecurringTransactionWithDetails {
+  final RecurringTransaction recurring;
+  final Category category;
+  final Account account;
+
+  const RecurringTransactionWithDetails({
+    required this.recurring,
+    required this.category,
+    required this.account,
+  });
+}
+

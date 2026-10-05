@@ -60,6 +60,7 @@ class TransactionFilterState {
   final String searchQuery;
   final TransactionType? type;
   final String? categoryId;
+  final String? accountId;
   final DateTime? startDate;
   final DateTime? endDate;
 
@@ -67,6 +68,7 @@ class TransactionFilterState {
     this.searchQuery = '',
     this.type,
     this.categoryId,
+    this.accountId,
     this.startDate,
     this.endDate,
   });
@@ -77,6 +79,8 @@ class TransactionFilterState {
     bool clearType = false,
     String? categoryId,
     bool clearCategory = false,
+    String? accountId,
+    bool clearAccount = false,
     DateTime? startDate,
     DateTime? endDate,
     bool clearDates = false,
@@ -85,6 +89,7 @@ class TransactionFilterState {
       searchQuery: searchQuery ?? this.searchQuery,
       type: clearType ? null : (type ?? this.type),
       categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
+      accountId: clearAccount ? null : (accountId ?? this.accountId),
       startDate: clearDates ? null : (startDate ?? this.startDate),
       endDate: clearDates ? null : (endDate ?? this.endDate),
     );
@@ -105,6 +110,7 @@ final filteredTransactionsProvider = FutureProvider<List<DailyTransactionGroup>>
     searchQuery: filter.searchQuery,
     type: filter.type,
     categoryId: filter.categoryId,
+    accountId: filter.accountId,
     startDate: filter.startDate,
     endDate: filter.endDate,
   );
@@ -153,6 +159,13 @@ final accountsProvider = FutureProvider<List<Account>>((ref) async {
   return repo.getAllAccounts();
 });
 
+/// Specific account balance provider.
+final accountBalanceProvider = FutureProvider.family<int, String>((ref, accountId) async {
+  ref.watch(dataChangeStreamProvider);
+  final repo = ref.watch(expenseRepositoryProvider);
+  return repo.getAccountBalanceMinor(accountId);
+});
+
 /// Selected month/year for budget view ('YYYY-MM').
 final selectedBudgetMonthProvider = StateProvider<String>((ref) {
   final now = DateTime.now();
@@ -167,5 +180,13 @@ final budgetsProvider = FutureProvider<List<BudgetProgress>>((ref) async {
   return repo.getBudgetsWithProgress(monthYear);
 });
 
+/// Recurring transactions provider.
+final recurringTransactionsProvider = FutureProvider<List<RecurringTransactionWithDetails>>((ref) async {
+  ref.watch(dataChangeStreamProvider);
+  final repo = ref.watch(expenseRepositoryProvider);
+  return repo.getAllRecurringTransactions();
+});
+
 /// Theme mode provider.
 final themeModeProvider = StateProvider<bool>((ref) => false); // false = light, true = dark
+

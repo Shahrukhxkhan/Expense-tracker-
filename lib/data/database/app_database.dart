@@ -24,8 +24,9 @@ class AppDatabase {
       return await databaseFactory.openDatabase(
         'expense_tracker.db',
         options: OpenDatabaseOptions(
-          version: 1,
+          version: 2,
           onCreate: _onCreate,
+          onUpgrade: _onUpgrade,
         ),
       );
     }
@@ -41,8 +42,9 @@ class AppDatabase {
 
     return await openDatabase(
       dbPath,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -81,6 +83,7 @@ class AppDatabase {
         accountId TEXT NOT NULL,
         date TEXT NOT NULL,
         note TEXT,
+        receiptPath TEXT,
         createdAt TEXT NOT NULL,
         FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE RESTRICT,
         FOREIGN KEY (accountId) REFERENCES accounts(id) ON DELETE RESTRICT
@@ -105,6 +108,54 @@ class AppDatabase {
         UNIQUE (categoryId, monthYear)
       );
     ''');
+
+    await db.execute('''
+      CREATE TABLE recurring_transactions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        amountMinor INTEGER NOT NULL CHECK (amountMinor > 0),
+        type TEXT NOT NULL,
+        categoryId TEXT NOT NULL,
+        accountId TEXT NOT NULL,
+        frequency TEXT NOT NULL,
+        startDate TEXT NOT NULL,
+        lastProcessedDate TEXT,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        note TEXT,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE RESTRICT,
+        FOREIGN KEY (accountId) REFERENCES accounts(id) ON DELETE RESTRICT
+      );
+    ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add receiptPath column if missing
+      try {
+        await db.execute('ALTER TABLE transactions ADD COLUMN receiptPath TEXT;');
+      } catch (_) {}
+
+      // Create recurring_transactions table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS recurring_transactions (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          amountMinor INTEGER NOT NULL CHECK (amountMinor > 0),
+          type TEXT NOT NULL,
+          categoryId TEXT NOT NULL,
+          accountId TEXT NOT NULL,
+          frequency TEXT NOT NULL,
+          startDate TEXT NOT NULL,
+          lastProcessedDate TEXT,
+          isActive INTEGER NOT NULL DEFAULT 1,
+          note TEXT,
+          createdAt TEXT NOT NULL,
+          FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE RESTRICT,
+          FOREIGN KEY (accountId) REFERENCES accounts(id) ON DELETE RESTRICT
+        );
+      ''');
+    }
   }
 
   Future<void> close() async {

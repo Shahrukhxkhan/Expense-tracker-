@@ -3,6 +3,7 @@ import 'package:expense_tracker/core/utils/currency_formatter.dart';
 import 'package:expense_tracker/data/models/models.dart';
 import 'package:expense_tracker/presentation/providers/expense_providers.dart';
 import 'package:expense_tracker/presentation/widgets/category_chip.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +32,7 @@ class _AddEditTransactionScreenState
   String? _selectedCategoryId;
   String? _selectedAccountId;
   late DateTime _selectedDate;
+  String? _receiptPath;
   bool _isSubmitting = false;
 
   @override
@@ -45,6 +47,7 @@ class _AddEditTransactionScreenState
       _selectedCategoryId = init.categoryId;
       _selectedAccountId = init.accountId;
       _selectedDate = init.date;
+      _receiptPath = init.receiptPath;
     } else {
       _selectedType = TransactionType.expense;
       _selectedDate = DateTime.now();
@@ -258,9 +261,74 @@ class _AddEditTransactionScreenState
               ),
             ),
 
+            const SizedBox(height: 20),
+
+            // 7. Receipt / Attachment Section
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.15)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.receipt_long_rounded, size: 20),
+                            SizedBox(width: 8),
+                            Text('Receipt / Attachment', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        TextButton.icon(
+                          onPressed: _pickReceipt,
+                          icon: Icon(_receiptPath != null ? Icons.change_circle_rounded : Icons.attach_file_rounded),
+                          label: Text(_receiptPath != null ? 'Change' : 'Attach'),
+                        ),
+                      ],
+                    ),
+                    if (_receiptPath != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.description_rounded, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _receiptPath!.split(RegExp(r'[\\/]')).last,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                              tooltip: 'Remove Receipt',
+                              onPressed: () => setState(() => _receiptPath = null),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
             const SizedBox(height: 32),
 
-            // 7. Save Action Button
+            // 8. Save Action Button
             SizedBox(
               height: 52,
               child: FilledButton(
@@ -281,6 +349,27 @@ class _AddEditTransactionScreenState
         ),
       ),
     );
+  }
+
+  Future<void> _pickReceipt() async {
+    try {
+      final result = await FilePickerPlatform.instance.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+      );
+      if (result.isNotEmpty) {
+        final path = result.first.path ?? result.first.name;
+        setState(() {
+          _receiptPath = path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick file: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -328,6 +417,7 @@ class _AddEditTransactionScreenState
         accountId: _selectedAccountId!,
         date: _selectedDate,
         note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        receiptPath: _receiptPath,
         createdAt: isEditing ? widget.initialTransaction!.createdAt : DateTime.now(),
       );
 

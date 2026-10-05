@@ -96,10 +96,23 @@ class TransactionTile extends StatelessWidget {
             ],
           ),
         ),
-        trailing: AmountText(
-          amountMinor: t.amountMinor,
-          isIncome: isIncome,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (t.receiptPath != null) ...[
+              IconButton(
+                icon: const Icon(Icons.receipt_rounded, size: 20, color: Colors.blueAccent),
+                tooltip: 'View Receipt',
+                onPressed: () => _showReceiptDialog(context, t.receiptPath!, t.title),
+              ),
+              const SizedBox(width: 2),
+            ],
+            AmountText(
+              amountMinor: t.amountMinor,
+              isIncome: isIncome,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ],
         ),
         onTap: onTap,
       ),
@@ -125,5 +138,47 @@ class TransactionTile extends StatelessWidget {
     }
 
     return tile;
+  }
+
+  void _showReceiptDialog(BuildContext context, String receiptPath, String title) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Receipt: $title'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.description_rounded, size: 28),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      receiptPath.split(RegExp(r'[\\/]')).last,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'File path:\n$receiptPath',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
   }
 }

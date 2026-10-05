@@ -1,3 +1,4 @@
+import 'package:expense_tracker/core/services/data_export_service.dart';
 import 'package:expense_tracker/core/theme/app_theme.dart';
 import 'package:expense_tracker/core/utils/currency_formatter.dart';
 import 'package:expense_tracker/data/models/models.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// Transaction List screen with dynamic search, filter chips, date grouping, and swipe-to-delete with undo.
 class TransactionListScreen extends ConsumerStatefulWidget {
@@ -31,13 +33,20 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     final filter = ref.watch(transactionFilterProvider);
     final groupedAsync = ref.watch(filteredTransactionsProvider);
     final categoriesAsync = ref.watch(categoriesProvider(null));
+    final accountsAsync = ref.watch(accountsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('All Transactions'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'Export Data (CSV / JSON)',
+            onPressed: () => _openExportBottomSheet(context),
+          ),
           if (filter.type != null ||
               filter.categoryId != null ||
+              filter.accountId != null ||
               filter.searchQuery.isNotEmpty ||
               filter.startDate != null)
             IconButton(
@@ -138,6 +147,28 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
                         ref.read(transactionFilterProvider.notifier).state = filter.copyWith(
                           categoryId: catId,
                           clearCategory: catId == null,
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const SizedBox(),
+                  error: (_, _) => const SizedBox(),
+                ),
+                const SizedBox(width: 8),
+                accountsAsync.when(
+                  data: (accs) {
+                    return DropdownButton<String?>(
+                      value: filter.accountId,
+                      hint: const Text('Account'),
+                      underline: const SizedBox(),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('All Accounts')),
+                        ...accs.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))),
+                      ],
+                      onChanged: (accId) {
+                        ref.read(transactionFilterProvider.notifier).state = filter.copyWith(
+                          accountId: accId,
+                          clearAccount: accId == null,
                         );
                       },
                     );
@@ -270,5 +301,93 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
     if (target == today) return 'TODAY';
     if (target == today.subtract(const Duration(days: 1))) return 'YESTERDAY';
     return DateFormat('EEE, MMM d, yyyy').format(date).toUpperCase();
+  }
+
+  Future<void> _openExportBottomSheet(BuildContext context) async {
+    final repo = ref.read(expenseRepositoryProvider);
+    final filter = ref.read(transactionFilterProvider);
+    final allItems = await repo.getTransactions(
+      searchQuery: filter.searchQuery,
+      type: filter.type,
+      categoryId: filter.categoryId,
+      accountId: filter.accountId,
+      startDate: filter.startDate,
+      endDate: filter.endDate,
+    );
+
+    if (!context.mounted) return;
+
+    if (allItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No transactions to export.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Export Transactions (${allItems.length} records)',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Export your financial data for spreadsheets, tax accounting, or backups.',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFE8F5E9),
+                  child: Icon(Icons.table_chart_rounded, color: Colors.green),
+                ),
+                title: const Text('Export as CSV Spreadsheet', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Compatible with Excel, Google Sheets & Numbers'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                onTap: () async {
+                  Navigator.pop(sheetCtx);
+                  final csvData = DataExportService.transactionsToCsv(allItems);
+                  await Share.share(
+                    csvData,
+                    subject: 'Expense Tracker CSV Export (${DateFormat('yyyy-MM-dd').format(DateTime.now())})',
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFE3F2FD),
+                  child: Icon(Icons.code_rounded, color: Colors.blue),
+                ),
+                title: const Text('Export as JSON Backup', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Structured developer & raw data format'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                onTap: () async {
+                  Navigator.pop(sheetCtx);
+                  final jsonData = DataExportService.transactionsToJson(allItems);
+                  await Share.share(
+                    jsonData,
+                    subject: 'Expense Tracker JSON Backup (${DateFormat('yyyy-MM-dd').format(DateTime.now())})',
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 class CurrencyFormatter {
   CurrencyFormatter._();
 
+  static String activeCurrencyCode = 'USD';
+
   static final NumberFormat _currencyFormat = NumberFormat.currency(
     symbol: '\$',
     decimalDigits: 2,

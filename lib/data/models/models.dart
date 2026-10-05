@@ -219,6 +219,7 @@ class Transaction {
   final String accountId;
   final DateTime date;
   final String? note;
+  final String? receiptPath;
   final DateTime createdAt;
 
   const Transaction({
@@ -230,6 +231,7 @@ class Transaction {
     required this.accountId,
     required this.date,
     this.note,
+    this.receiptPath,
     required this.createdAt,
   }) : assert(amountMinor > 0, 'Amount must be greater than zero');
 
@@ -242,6 +244,7 @@ class Transaction {
     String? accountId,
     DateTime? date,
     String? note,
+    String? receiptPath,
     DateTime? createdAt,
   }) {
     return Transaction(
@@ -253,6 +256,7 @@ class Transaction {
       accountId: accountId ?? this.accountId,
       date: date ?? this.date,
       note: note ?? this.note,
+      receiptPath: receiptPath ?? this.receiptPath,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -267,6 +271,7 @@ class Transaction {
       'accountId': accountId,
       'date': date.toIso8601String(),
       'note': note,
+      'receiptPath': receiptPath,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -281,6 +286,7 @@ class Transaction {
       accountId: map['accountId'] as String,
       date: DateTime.parse(map['date'] as String),
       note: map['note'] as String?,
+      receiptPath: map['receiptPath'] as String?,
       createdAt: DateTime.parse(map['createdAt'] as String),
     );
   }
@@ -298,6 +304,7 @@ class Transaction {
           accountId == other.accountId &&
           date == other.date &&
           note == other.note &&
+          receiptPath == other.receiptPath &&
           createdAt == other.createdAt;
 
   @override
@@ -310,6 +317,7 @@ class Transaction {
         accountId,
         date,
         note,
+        receiptPath,
         createdAt,
       );
 }
@@ -386,4 +394,130 @@ class Budget {
         monthYear,
         createdAt,
       );
+}
+
+/// Frequency for scheduled / recurring transactions.
+enum RecurringFrequency {
+  daily,
+  weekly,
+  monthly,
+  yearly;
+
+  static RecurringFrequency fromString(String val) {
+    return RecurringFrequency.values.firstWhere(
+      (e) => e.name.toLowerCase() == val.toLowerCase(),
+      orElse: () => RecurringFrequency.monthly,
+    );
+  }
+
+  String get displayName {
+    switch (this) {
+      case RecurringFrequency.daily:
+        return 'Daily';
+      case RecurringFrequency.weekly:
+        return 'Weekly';
+      case RecurringFrequency.monthly:
+        return 'Monthly';
+      case RecurringFrequency.yearly:
+        return 'Yearly';
+    }
+  }
+}
+
+/// Model for recurring template / scheduled transactions.
+@immutable
+class RecurringTransaction {
+  final String id;
+  final String title;
+  final int amountMinor;
+  final TransactionType type;
+  final String categoryId;
+  final String accountId;
+  final RecurringFrequency frequency;
+  final DateTime startDate;
+  final DateTime? lastProcessedDate;
+  final bool isActive;
+  final String? note;
+  final DateTime createdAt;
+
+  const RecurringTransaction({
+    required this.id,
+    required this.title,
+    required this.amountMinor,
+    required this.type,
+    required this.categoryId,
+    required this.accountId,
+    required this.frequency,
+    required this.startDate,
+    this.lastProcessedDate,
+    this.isActive = true,
+    this.note,
+    required this.createdAt,
+  });
+
+  RecurringTransaction copyWith({
+    String? id,
+    String? title,
+    int? amountMinor,
+    TransactionType? type,
+    String? categoryId,
+    String? accountId,
+    RecurringFrequency? frequency,
+    DateTime? startDate,
+    DateTime? lastProcessedDate,
+    bool? isActive,
+    String? note,
+    DateTime? createdAt,
+  }) {
+    return RecurringTransaction(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      amountMinor: amountMinor ?? this.amountMinor,
+      type: type ?? this.type,
+      categoryId: categoryId ?? this.categoryId,
+      accountId: accountId ?? this.accountId,
+      frequency: frequency ?? this.frequency,
+      startDate: startDate ?? this.startDate,
+      lastProcessedDate: lastProcessedDate ?? this.lastProcessedDate,
+      isActive: isActive ?? this.isActive,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'amountMinor': amountMinor,
+      'type': type.name,
+      'categoryId': categoryId,
+      'accountId': accountId,
+      'frequency': frequency.name,
+      'startDate': startDate.toIso8601String(),
+      'lastProcessedDate': lastProcessedDate?.toIso8601String(),
+      'isActive': isActive ? 1 : 0,
+      'note': note,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory RecurringTransaction.fromMap(Map<String, dynamic> map) {
+    return RecurringTransaction(
+      id: map['id'] as String,
+      title: map['title'] as String,
+      amountMinor: (map['amountMinor'] as num).toInt(),
+      type: TransactionType.fromString(map['type'] as String),
+      categoryId: map['categoryId'] as String,
+      accountId: map['accountId'] as String,
+      frequency: RecurringFrequency.fromString(map['frequency'] as String),
+      startDate: DateTime.parse(map['startDate'] as String),
+      lastProcessedDate: map['lastProcessedDate'] != null
+          ? DateTime.parse(map['lastProcessedDate'] as String)
+          : null,
+      isActive: (map['isActive'] as int? ?? 1) == 1,
+      note: map['note'] as String?,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+    );
+  }
 }

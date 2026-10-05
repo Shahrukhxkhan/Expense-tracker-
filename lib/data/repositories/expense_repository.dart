@@ -25,17 +25,120 @@ class ExpenseRepository {
 
   Future<List<Account>> getAllAccounts() async {
     final db = await _dbProvider.database;
-    final maps = await db.query('accounts', orderBy: 'name ASC');
+    final maps = await db.query('accounts', orderBy: 'isDefault DESC, name ASC');
     return maps.map(Account.fromMap).toList();
   }
 
   Future<void> insertAccount(Account account) async {
     final db = await _dbProvider.database;
+    if (account.isDefault) {
+      await db.update('accounts', {'isDefault': 0});
+    }
     await db.insert(
       'accounts',
       account.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    _notifyChanged();
+  }
+
+  Future<void> updateAccount(Account account) async {
+    final db = await _dbProvider.database;
+    if (account.isDefault) {
+      await db.update('accounts', {'isDefault': 0});
+    }
+    await db.update(
+      'accounts',
+      account.toMap(),
+      where: 'id = ?',
+      whereArgs: [account.id],
+    );
+    _notifyChanged();
+  }
+
+  Future<void> deleteAccount(String id) async {
+    final db = await _dbProvider.database;
+    await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
+    _notifyChanged();
+  }
+
+  Future<int> getAccountBalanceMinor(String accountId) async {
+    final db = await _dbProvider.database;
+    final accRows = await db.query('accounts', where: 'id = ?', whereArgs: [accountId]);
+    if (accRows.isEmpty) return 0;
+    final initial = (accRows.first['initialBalanceMinor'] as num).toInt();
+
+    final txRows = await db.rawQuery('''
+      SELECT 
+        COALESCE(SUM(CASE WHEN type = 'income' THEN amountMinor ELSE 0 END), 0) AS total_income,
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN amountMinor ELSE 0 END), 0) AS total_expense
+      FROM transactions
+      WHERE accountId = ?
+    ''', [accountId]);
+
+    final income = (txRows.first['total_income'] as num).toInt();
+    final expense = (txRows.first['total_expense'] as num).toInt();
+    return initial + income - expense;
+  }
+
+  /// Transfer funds between two accounts by generating paired transfer transactions
+  Future<void> transferFunds({
+    required Account fromAccount,
+    required Account toAccount,
+    required int amountMinor,
+    required DateTime date,
+    String? note,
+  }) async {
+    if (amountMinor <= 0) throw ArgumentError('Transfer amount must be positive');
+    final db = await _dbProvider.database;
+
+    final transferCats = await db.query('categories', where: 'name = ?', whereArgs: ['Transfer']);
+    String catId;
+    if (transferCats.isNotEmpty) {
+      catId = transferCats.first['id'] as String;
+    } else {
+      catId = 'cat-transfer';
+      await db.insert('categories', {
+        'id': catId,
+        'name': 'Transfer',
+        'type': 'expense',
+        'iconCodePoint': 0xe5d8,
+        'colorHex': '#607D8B',
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+    }
+
+    final transferNote = note != null && note.isNotEmpty ? note : 'Transfer: ${fromAccount.name} -> ${toAccount.name}';
+    final now = DateTime.now();
+
+    await db.transaction((txn) async {
+      await txn.insert('transactions', {
+        'id': 'tx-tf-out-${now.millisecondsSinceEpoch}',
+        'title': 'Transfer to ${toAccount.name}',
+        'amountMinor': amountMinor,
+        'type': 'expense',
+        'categoryId': catId,
+        'accountId': fromAccount.id,
+        'date': date.toIso8601String(),
+        'note': transferNote,
+        'receiptPath': null,
+        'createdAt': now.toIso8601String(),
+      });
+
+      await txn.insert('transactions', {
+        'id': 'tx-tf-in-${now.millisecondsSinceEpoch}',
+        'title': 'Transfer from ${fromAccount.name}',
+        'amountMinor': amountMinor,
+        'type': 'income',
+        'categoryId': catId,
+        'accountId': toAccount.id,
+        'date': date.toIso8601String(),
+        'note': transferNote,
+        'receiptPath': null,
+        'createdAt': now.toIso8601String(),
+      });
+    });
+
     _notifyChanged();
   }
 
@@ -61,6 +164,17 @@ class ExpenseRepository {
       'categories',
       category.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    _notifyChanged();
+  }
+
+  Future<void> updateCategory(Category category) async {
+    final db = await _dbProvider.database;
+    await db.update(
+      'categories',
+      category.toMap(),
+      where: 'id = ?',
+      whereArgs: [category.id],
     );
     _notifyChanged();
   }
@@ -118,6 +232,7 @@ class ExpenseRepository {
     DateTime? startDate,
     DateTime? endDate,
     String? categoryId,
+    String? accountId,
     TransactionType? type,
     String? searchQuery,
     int? limit,
@@ -139,6 +254,10 @@ class ExpenseRepository {
       whereClauses.add('t.categoryId = ?');
       whereArgs.add(categoryId);
     }
+    if (accountId != null && accountId.isNotEmpty) {
+      whereClauses.add('t.accountId = ?');
+      whereArgs.add(accountId);
+    }
     if (type != null) {
       whereClauses.add('t.type = ?');
       whereArgs.add(type.name);
@@ -157,7 +276,7 @@ class ExpenseRepository {
       SELECT 
         t.id AS t_id, t.title AS t_title, t.amountMinor AS t_amountMinor,
         t.type AS t_type, t.categoryId AS t_categoryId, t.accountId AS t_accountId,
-        t.date AS t_date, t.note AS t_note, t.createdAt AS t_createdAt,
+        t.date AS t_date, t.note AS t_note, t.receiptPath AS t_receiptPath, t.createdAt AS t_createdAt,
         c.id AS c_id, c.name AS c_name, c.type AS c_type,
         c.iconCodePoint AS c_iconCodePoint, c.colorHex AS c_colorHex, c.createdAt AS c_createdAt,
         a.id AS a_id, a.name AS a_name, a.type AS a_type,
@@ -183,6 +302,7 @@ class ExpenseRepository {
         accountId: row['t_accountId'] as String,
         date: DateTime.parse(row['t_date'] as String),
         note: row['t_note'] as String?,
+        receiptPath: row['t_receiptPath'] as String?,
         createdAt: DateTime.parse(row['t_createdAt'] as String),
       );
 
@@ -382,6 +502,166 @@ class ExpenseRepository {
         spentMinor: (r['spentMinor'] as num).toInt(),
       );
     }).toList();
+  }
+
+  Future<void> deleteBudget(String id) async {
+    final db = await _dbProvider.database;
+    await db.delete('budgets', where: 'id = ?', whereArgs: [id]);
+    _notifyChanged();
+  }
+
+  // ===================== RECURRING TRANSACTIONS =====================
+
+  Future<void> insertRecurringTransaction(RecurringTransaction recurring) async {
+    final db = await _dbProvider.database;
+    await db.insert(
+      'recurring_transactions',
+      recurring.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    _notifyChanged();
+  }
+
+  Future<void> updateRecurringTransaction(RecurringTransaction recurring) async {
+    final db = await _dbProvider.database;
+    await db.update(
+      'recurring_transactions',
+      recurring.toMap(),
+      where: 'id = ?',
+      whereArgs: [recurring.id],
+    );
+    _notifyChanged();
+  }
+
+  Future<void> deleteRecurringTransaction(String id) async {
+    final db = await _dbProvider.database;
+    await db.delete('recurring_transactions', where: 'id = ?', whereArgs: [id]);
+    _notifyChanged();
+  }
+
+  Future<List<RecurringTransactionWithDetails>> getAllRecurringTransactions() async {
+    final db = await _dbProvider.database;
+    final query = '''
+      SELECT 
+        r.id AS r_id, r.title AS r_title, r.amountMinor AS r_amountMinor,
+        r.type AS r_type, r.categoryId AS r_categoryId, r.accountId AS r_accountId,
+        r.frequency AS r_frequency, r.startDate AS r_startDate,
+        r.lastProcessedDate AS r_lastProcessedDate, r.isActive AS r_isActive,
+        r.note AS r_note, r.createdAt AS r_createdAt,
+        c.id AS c_id, c.name AS c_name, c.type AS c_type,
+        c.iconCodePoint AS c_iconCodePoint, c.colorHex AS c_colorHex, c.createdAt AS c_createdAt,
+        a.id AS a_id, a.name AS a_name, a.type AS a_type,
+        a.initialBalanceMinor AS a_initialBalanceMinor, a.colorHex AS a_colorHex,
+        a.iconCodePoint AS a_iconCodePoint, a.isDefault AS a_isDefault, a.createdAt AS a_createdAt
+      FROM recurring_transactions r
+      JOIN categories c ON r.categoryId = c.id
+      JOIN accounts a ON r.accountId = a.id
+      ORDER BY r.createdAt DESC
+    ''';
+
+    final rows = await db.rawQuery(query);
+
+    return rows.map((row) {
+      final recurring = RecurringTransaction(
+        id: row['r_id'] as String,
+        title: row['r_title'] as String,
+        amountMinor: (row['r_amountMinor'] as num).toInt(),
+        type: TransactionType.fromString(row['r_type'] as String),
+        categoryId: row['r_categoryId'] as String,
+        accountId: row['r_accountId'] as String,
+        frequency: RecurringFrequency.fromString(row['r_frequency'] as String),
+        startDate: DateTime.parse(row['r_startDate'] as String),
+        lastProcessedDate: row['r_lastProcessedDate'] != null
+            ? DateTime.parse(row['r_lastProcessedDate'] as String)
+            : null,
+        isActive: (row['r_isActive'] as int? ?? 1) == 1,
+        note: row['r_note'] as String?,
+        createdAt: DateTime.parse(row['r_createdAt'] as String),
+      );
+
+      final category = Category(
+        id: row['c_id'] as String,
+        name: row['c_name'] as String,
+        type: TransactionType.fromString(row['c_type'] as String),
+        iconCodePoint: (row['c_iconCodePoint'] as num).toInt(),
+        colorHex: row['c_colorHex'] as String,
+        createdAt: DateTime.parse(row['c_createdAt'] as String),
+      );
+
+      final account = Account(
+        id: row['a_id'] as String,
+        name: row['a_name'] as String,
+        type: AccountType.fromString(row['a_type'] as String),
+        initialBalanceMinor: (row['a_initialBalanceMinor'] as num).toInt(),
+        colorHex: row['a_colorHex'] as String,
+        iconCodePoint: (row['a_iconCodePoint'] as num).toInt(),
+        isDefault: (row['a_isDefault'] as int? ?? 0) == 1,
+        createdAt: DateTime.parse(row['a_createdAt'] as String),
+      );
+
+      return RecurringTransactionWithDetails(
+        recurring: recurring,
+        category: category,
+        account: account,
+      );
+    }).toList();
+  }
+
+  /// Automatically generates transaction ledger entries for recurring items due up to now.
+  Future<int> processDueRecurringTransactions() async {
+    final db = await _dbProvider.database;
+    final rows = await db.query('recurring_transactions', where: 'isActive = 1');
+    final now = DateTime.now();
+    int generatedCount = 0;
+
+    for (final map in rows) {
+      final rec = RecurringTransaction.fromMap(map);
+      DateTime cursor = rec.lastProcessedDate ?? rec.startDate;
+
+      // Advance by one period to find the next due occurrence
+      DateTime nextDue = _getNextOccurrence(cursor, rec.frequency);
+
+      while (!nextDue.isAfter(now)) {
+        // Insert standard transaction
+        await insertTransaction(Transaction(
+          id: 'tx-rec-${DateTime.now().microsecondsSinceEpoch}-$generatedCount',
+          title: rec.title,
+          amountMinor: rec.amountMinor,
+          type: rec.type,
+          categoryId: rec.categoryId,
+          accountId: rec.accountId,
+          date: nextDue,
+          note: rec.note != null ? '${rec.note} (Recurring: ${rec.frequency.displayName})' : 'Recurring: ${rec.frequency.displayName}',
+          createdAt: DateTime.now(),
+        ));
+
+        cursor = nextDue;
+        nextDue = _getNextOccurrence(cursor, rec.frequency);
+        generatedCount++;
+      }
+
+      if (cursor != (rec.lastProcessedDate ?? rec.startDate)) {
+        await updateRecurringTransaction(rec.copyWith(lastProcessedDate: cursor));
+      }
+    }
+
+    if (generatedCount > 0) {
+      _notifyChanged();
+    }
+    return generatedCount;
+  }
+
+  DateTime _getNextOccurrence(DateTime base, RecurringFrequency freq) {
+    switch (freq) {
+      case RecurringFrequency.daily:
+        return base.add(const Duration(days: 1));
+      case RecurringFrequency.weekly:
+        return base.add(const Duration(days: 7));
+      case RecurringFrequency.monthly:
+        return DateTime(base.year, base.month + 1, base.day);
+      case RecurringFrequency.yearly:
+        return DateTime(base.year + 1, base.month, base.day);
+    }
   }
 
   // ===================== SEED DATA =====================

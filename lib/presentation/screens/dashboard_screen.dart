@@ -77,7 +77,49 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+
+            // Quick Access Features Grid
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  _buildQuickAction(
+                    context,
+                    title: 'Accounts',
+                    icon: Icons.account_balance_wallet_rounded,
+                    color: Colors.blue,
+                    route: '/accounts',
+                  ),
+                  const SizedBox(width: 8),
+                  _buildQuickAction(
+                    context,
+                    title: 'Budgets',
+                    icon: Icons.pie_chart_rounded,
+                    color: Colors.purple,
+                    route: '/budgets',
+                  ),
+                  const SizedBox(width: 8),
+                  _buildQuickAction(
+                    context,
+                    title: 'Recurring',
+                    icon: Icons.repeat_rounded,
+                    color: Colors.orange,
+                    route: '/recurring',
+                  ),
+                  const SizedBox(width: 8),
+                  _buildQuickAction(
+                    context,
+                    title: 'Categories',
+                    icon: Icons.category_rounded,
+                    color: Colors.teal,
+                    route: '/categories',
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
 
             // 2. Spending by Category (Donut Chart)
             Padding(
@@ -202,6 +244,50 @@ class DashboardScreen extends ConsumerWidget {
         onPressed: () => context.push('/transaction/add'),
         icon: const Icon(Icons.add_rounded),
         label: const Text('Add Entry'),
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required String route,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: () => context.push(route),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF334155)
+                  : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: color.withValues(alpha: 0.15),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
