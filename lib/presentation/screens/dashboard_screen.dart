@@ -1,5 +1,6 @@
 import 'package:expense_tracker/core/theme/app_theme.dart';
 import 'package:expense_tracker/presentation/providers/expense_providers.dart';
+import 'package:expense_tracker/presentation/providers/theme_provider.dart';
 import 'package:expense_tracker/presentation/widgets/analytics_charts.dart';
 import 'package:expense_tracker/presentation/widgets/empty_state.dart';
 import 'package:expense_tracker/presentation/widgets/summary_card.dart';
@@ -26,15 +27,21 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(
-              Theme.of(context).brightness == Brightness.dark
-                  ? Icons.light_mode_rounded
-                  : Icons.dark_mode_rounded,
+              switch (ref.watch(themeSettingsProvider).themeMode) {
+                AppThemeMode.light => Icons.light_mode_rounded,
+                AppThemeMode.dark => Icons.dark_mode_rounded,
+                AppThemeMode.amoled => Icons.nightlight_round,
+              },
             ),
-            tooltip: 'Toggle Theme',
+            tooltip: 'Cycle Theme Mode (Light / Dark / OLED)',
             onPressed: () {
-              ref.read(themeModeProvider.notifier).state =
-                  !ref.read(themeModeProvider.notifier).state;
+              ref.read(themeSettingsProvider.notifier).cycleThemeMode();
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings & Customization',
+            onPressed: () => context.push('/settings'),
           ),
           IconButton(
             icon: const Icon(Icons.tune_rounded),

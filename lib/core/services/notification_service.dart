@@ -20,7 +20,7 @@ class NotificationService {
 
       const androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
-      const iosSettings = DarwinInitializationSettings(
+      const iosSettings = IOSInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
@@ -33,14 +33,14 @@ class NotificationService {
 
       await _notificationsPlugin.initialize(
         initSettings,
-        onDidReceiveNotificationResponse: (response) {
-          debugPrint('Notification clicked: ${response.payload}');
+        onSelectNotification: (String? payload) async {
+          debugPrint('Notification clicked: $payload');
         },
       );
 
       _initialized = true;
     } catch (e) {
-      debugPrint('NotificationService init error (platform might not support): $e');
+      debugPrint('NotificationService init error: $e');
     }
   }
 
@@ -56,13 +56,13 @@ class NotificationService {
     const androidDetails = AndroidNotificationDetails(
       'expense_tracker_alerts',
       'Expense Alerts',
-      channelDescription: 'Alerts for budgets, recurring expenses, and logs',
+      'Alerts for budgets, recurring expenses, and logs',
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
     );
 
-    const iosDetails = DarwinNotificationDetails();
+    const iosDetails = IOSNotificationDetails();
 
     const details = NotificationDetails(
       android: androidDetails,
@@ -114,11 +114,11 @@ class NotificationService {
           android: AndroidNotificationDetails(
             'daily_reminders',
             'Daily Reminders',
-            channelDescription: 'Daily evening prompts to log expenses',
+            'Daily evening prompts to log expenses',
             importance: Importance.defaultImportance,
             priority: Priority.defaultPriority,
           ),
-          iOS: DarwinNotificationDetails(),
+          iOS: IOSNotificationDetails(),
         ),
         androidAllowWhileIdle: true,
         uiLocalNotificationDateInterpretation:

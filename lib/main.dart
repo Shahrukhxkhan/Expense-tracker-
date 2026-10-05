@@ -7,7 +7,6 @@ import 'core/theme/app_theme.dart';
 import 'data/database/database_seeder.dart';
 import 'data/models/models.dart';
 import 'data/repositories/expense_repository.dart';
-import 'presentation/providers/expense_providers.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/accounts_screen.dart';
 import 'presentation/screens/add_edit_transaction_screen.dart';
