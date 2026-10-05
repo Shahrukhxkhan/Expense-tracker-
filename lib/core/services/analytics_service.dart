@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/models/derived_models.dart';
 import '../../data/models/goals_and_debts_model.dart';
-import '../../data/models/models.dart';
 
 class SmartFinancialInsight {
   final String title;

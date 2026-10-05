@@ -27,6 +27,10 @@ class _VisualAnalyticsScreenState extends ConsumerState<VisualAnalyticsScreen> {
     final monthTotalsAsync = ref.watch(currentMonthTotalsProvider);
     final spendingAsync = ref.watch(categorySpendingProvider);
     final historyAsync = ref.watch(monthlyFlowHistoryProvider);
+    final goals = ref.watch(goalsProvider);
+    final debts = ref.watch(debtsProvider);
+    final allTxAsync = ref.watch(allTransactionsProvider);
+
     final totals = monthTotalsAsync.value ?? (incomeMinor: 0, expenseMinor: 0);
     final balance = balanceAsync.value ?? 0;
     final spendingList = spendingAsync.value ?? [];
