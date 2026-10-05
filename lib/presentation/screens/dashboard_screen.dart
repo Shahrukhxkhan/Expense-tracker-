@@ -39,6 +39,11 @@ class DashboardScreen extends ConsumerWidget {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.analytics_outlined),
+            tooltip: 'Visual Analytics & Net Worth',
+            onPressed: () => context.push('/analytics'),
+          ),
+          IconButton(
             icon: const Icon(Icons.savings_outlined),
             tooltip: 'Savings Goals & Debts',
             onPressed: () => context.push('/goals-debts'),

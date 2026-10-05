@@ -18,6 +18,7 @@ import 'presentation/screens/goals_and_debts_screen.dart';
 import 'presentation/screens/recurring_transactions_screen.dart';
 import 'presentation/screens/settings_screen.dart';
 import 'presentation/screens/travel_mode_screen.dart';
+import 'presentation/screens/visual_analytics_screen.dart';
 import 'presentation/screens/transaction_list_screen.dart';
 
 void main() async {
@@ -89,6 +90,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/goals-debts',
       builder: (context, state) => const GoalsAndDebtsScreen(),
+    ),
+    GoRoute(
+      path: '/analytics',
+      builder: (context, state) => const VisualAnalyticsScreen(),
     ),
     GoRoute(
       path: '/settings',
