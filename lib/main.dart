@@ -15,6 +15,7 @@ import 'presentation/screens/category_management_screen.dart';
 import 'presentation/screens/dashboard_screen.dart';
 import 'presentation/screens/recurring_transactions_screen.dart';
 import 'presentation/screens/settings_screen.dart';
+import 'presentation/screens/travel_mode_screen.dart';
 import 'presentation/screens/transaction_list_screen.dart';
 
 void main() async {
@@ -74,6 +75,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/recurring',
       builder: (context, state) => const RecurringTransactionsScreen(),
+    ),
+    GoRoute(
+      path: '/travel',
+      builder: (context, state) => const TravelModeScreen(),
     ),
     GoRoute(
       path: '/settings',
